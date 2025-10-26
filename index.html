@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Familjelivet - 3D Open World</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header - Exact copy from original */
+        .game-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .game-header h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #FFD700;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 3D Canvas */
+        #gameCanvas {
+            flex: 1;
+            display: block;
+            background: #87CEEB;
+        }
+
+        /* UI Overlays */
+        .ui-overlay {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            z-index: 100;
+        }
+
+        .controls-info {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+
+        .controls-info h3 {
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+
+        .controls-info div {
+            margin: 5px 0;
+        }
+
+        /* Mobile Controls */
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .joystick {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+
+        .joystick-knob {
+            width: 30px;
+            height: 30px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .action-btn:active {
+            background: rgba(255,255,255,0.5);
+            transform: scale(0.95);
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-header {
+                padding: 10px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .game-header h1 {
+                font-size: 1.4rem;
+            }
+
+            .game-info {
+                gap: 10px;
+            }
+
+            .info-item {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+
+            .controls-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header - Exact copy from original -->
+        <header class="game-header">
+            <h1>🏡 Familjelivet 🏡</h1>
+            <div class="game-info">
+                <div class="info-item">
+                    <span class="info-icon">💰</span>
+                    <span class="info-label">Simoleons:</span>
+                    <span id="money" class="info-value">5000</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📅</span>
+                    <span class="info-label">Dag:</span>
+                    <span id="day" class="info-value">1</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🕐</span>
+                    <span class="info-label">Tid:</span>
+                    <span id="time" class="info-value">08:00</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🌤️</span>
+                    <span id="season" class="info-value">Vår</span>
+                </div>
+            </div>
+            <div class="time-controls">
+                <button id="pauseBtn" class="btn btn-secondary">⏸️ Pausa</button>
+                <button id="speedBtn" class="btn btn-secondary">▶️ Normal</button>
+            </div>
+        </header>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="loading-screen">
+            <div class="loading-spinner"></div>
+            <h2>Laddar din 3D-värld...</h2>
+            <p>Snart kan du utforska, bygga och köra bil!</p>
+        </div>
+
+        <!-- 3D Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- UI Overlays -->
+        <div class="ui-overlay">
+            <div class="controls-info">
+                <h3>🎮 Kontroller</h3>
+                <div><strong>WASD/Pilar:</strong> Gå runt</div>
+                <div><strong>E:</strong> Interagera (bil, dörr, bygg)</div>
+                <div><strong>Shift:</strong> Spring</div>
+                <div><strong>Space:</strong> Hoppa</div>
+                <div><strong>B:</strong> Byggläge</div>
+                <div><strong>M:</strong> Karta</div>
+                <div><strong>ESC:</strong> Meny</div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <div class="joystick" id="joystick">
+                <div class="joystick-knob" id="joystickKnob"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn" id="jumpBtn">🤸</button>
+                <button class="action-btn" id="interactBtn">E</button>
+                <button class="action-btn" id="buildBtn">🏠</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cannon@0.20.0/build/cannon.min.js"></script>
+
+    <script>
+        console.log('🎮 Initializing 3D Family Game...');
+        
+        // Game State
+        let gameState = {
+            money: 5000,
+            day: 1,
+            time: { hour: 8, minute: 0 },
+            season: 'Vår',
+            paused: false,
+            speed: 1,
+            player: {
+                position: { x: 0, y: 0, z: 0 },
+                inVehicle: false,
+                building: false
+            },
+            world: {
+                buildings: [],
+                vehicles: [],
+                weather: 'sunny'
+            }
+        };
+
+        // 3D Scene Setup
+        let scene, camera, renderer, world;
+        let player, playerBody;
+        let controls = { forward: false, backward: false, left: false, right: false, jump: false };
+        let clock = new THREE.Clock();
+        let loadingComplete = false;
+
+        // Initialize Game
+        function init() {
+            try {
+                console.log('Setting up scene...');
+                setupScene();
+                
+                console.log('Setting up physics...');
+                setupPhysics();
+                
+                console.log('Setting up player...');
+                setupPlayer();
+                
+                console.log('Setting up world...');
+                setupWorld();
+                
+                console.log('Setting up controls...');
+                setupControls();
+                setupMobileControls();
+                
+                updateUI();
+                
+                console.log('Starting animation loop...');
+                animate();
+                
+                // Hide loading screen
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    loadingComplete = true;
+                    console.log('🎉 Game loaded successfully!');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Error initializing game:', error);
+                document.getElementById('loadingScreen').innerHTML = 
+                    '<h2>Fel vid laddning</h2><p>Kontrollera konsolen för detaljer</p>';
+            }
+        }
+
+        function setupScene() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+
+            // Camera
+            const canvas = document.getElementById('gameCanvas');
+            const aspect = window.innerWidth / (window.innerHeight - 80);
+            camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight - 80);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 25);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+        }
+
+        function setupPhysics() {
+            world = new CANNON.World();
+            world.gravity.set(0, -9.82, 0);
+            world.broadphase = new CANNON.NaiveBroadphase();
+        }
+
+        function setupPlayer() {
+            // Visual player
+            const playerGeometry = new THREE.CapsuleGeometry(0.5, 1.5);
+            const playerMaterial = new THREE.MeshLambertMaterial({ color: 0x3498db });
+            player = new THREE.Mesh(playerGeometry, playerMaterial);
+            player.position.set(0, 1, 0);
+            player.castShadow = true;
+            scene.add(player);
+
+            // Physics body
+            const playerShape = new CANNON.Cylinder(0.5, 0.5, 1.5, 8);
+            playerBody = new CANNON.Body({ mass: 1 });
+            playerBody.addShape(playerShape);
+            playerBody.position.set(0, 1, 0);
+            playerBody.material = new CANNON.Material({ friction: 0.4 });
+            world.add(playerBody);
+        }
+
+        function setupWorld() {
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Physics ground
+            const groundShape = new CANNON.Plane();
+            const groundBody = new CANNON.Body({ mass: 0 });
+            groundBody.addShape(groundShape);
+            groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+            world.add(groundBody);
+
+            // Add some buildings
+            addBuilding(10, 0, 10, 0xff6b6b); // Red house
+            addBuilding(-10, 0, 10, 0x4ecdc4); // Cyan house
+            addBuilding(0, 0, 20, 0xffe66d); // Yellow building
+
+            // Add a car
+            addCar(5, 0.5, 0);
+
+            // Add trees
+            for (let i = 0; i < 20; i++) {
+                const x = (Math.random() - 0.5) * 80;
+                const z = (Math.random() - 0.5) * 80;
+                if (Math.abs(x) > 15 || Math.abs(z) > 15) { // Don't spawn too close to center
+                    addTree(x, 0, z);
+                }
+            }
+        }
+
+        function addBuilding(x, y, z, color = 0x8e44ad) {
+            // Visual building
+            const buildingGeometry = new THREE.BoxGeometry(4, 3, 4);
+            const buildingMaterial = new THREE.MeshLambertMaterial({ color: color });
+            const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+            building.position.set(x, y + 1.5, z);
+            building.castShadow = true;
+            building.receiveShadow = true;
+            scene.add(building);
+
+            // Roof
+            const roofGeometry = new THREE.ConeGeometry(3, 1.5, 4);
+            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.set(x, y + 3.25, z);
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            scene.add(roof);
+
+            // Physics body
+            const buildingShape = new CANNON.Box(new CANNON.Vec3(2, 1.5, 2));
+            const buildingBody = new CANNON.Body({ mass: 0 });
+            buildingBody.addShape(buildingShape);
+            buildingBody.position.set(x, y + 1.5, z);
+            world.add(buildingBody);
+
+            gameState.world.buildings.push({ x, y, z, color, type: 'house' });
+        }
+
+        function addCar(x, y, z) {
+            // Car body
+            const carGeometry = new THREE.BoxGeometry(3, 1, 1.5);
+            const carMaterial = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
+            const car = new THREE.Mesh(carGeometry, carMaterial);
+            car.position.set(x, y, z);
+            car.castShadow = true;
+            scene.add(car);
+
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
+            const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+            
+            const positions = [
+                { x: x + 1, y: y - 0.3, z: z + 0.6 },
+                { x: x + 1, y: y - 0.3, z: z - 0.6 },
+                { x: x - 1, y: y - 0.3, z: z + 0.6 },
+                { x: x - 1, y: y - 0.3, z: z - 0.6 }
+            ];
+
+            positions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.castShadow = true;
+                scene.add(wheel);
+            });
+
+            gameState.world.vehicles.push({ x, y, z, type: 'car', available: true });
+        }
+
+        function addTree(x, y, z) {
+            // Trunk
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(x, y + 1, z);
+            trunk.castShadow = true;
+            scene.add(trunk);
+
+            // Leaves
+            const leavesGeometry = new THREE.SphereGeometry(1.5);
+            const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(x, y + 2.5, z);
+            leaves.castShadow = true;
+            scene.add(leaves);
+        }
+
+        function setupControls() {
+            document.addEventListener('keydown', (event) => {
+                switch (event.code) {
+                    case 'KeyW':
+                    case 'ArrowUp':
+                        controls.forward = true;
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        controls.backward = true;
+                        break;
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        controls.left = true;
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        controls.right = true;
+                        break;
+                    case 'Space':
+                        controls.jump = true;
+                        event.preventDefault();
+                        break;
+                    case 'KeyE':
+                        interact();
+                        break;
+                    case 'KeyB':
+                        toggleBuildMode();
+                        break;
+                }
+            });
+
+            document.addEventListener('keyup', (event) => {
+                switch (event.code) {
+                    case 'KeyW':
+                    case 'ArrowUp':
+                        controls.forward = false;
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        controls.backward = false;
+                        break;
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        controls.left = false;
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        controls.right = false;
+                        break;
+                    case 'Space':
+                        controls.jump = false;
+                        break;
+                }
+            });
+        }
+
+        function setupMobileControls() {
+            const joystick = document.getElementById('joystick');
+            const joystickKnob = document.getElementById('joystickKnob');
+            const jumpBtn = document.getElementById('jumpBtn');
+            const interactBtn = document.getElementById('interactBtn');
+            const buildBtn = document.getElementById('buildBtn');
+
+            let joystickActive = false;
+            let joystickCenter = { x: 0, y: 0 };
+
+            function handleJoystickStart(event) {
+                joystickActive = true;
+                const rect = joystick.getBoundingClientRect();
+                joystickCenter = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+                event.preventDefault();
+            }
+
+            function handleJoystickMove(event) {
+                if (!joystickActive) return;
+                
+                const touch = event.touches ? event.touches[0] : event;
+                const deltaX = touch.clientX - joystickCenter.x;
+                const deltaY = touch.clientY - joystickCenter.y;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = 25;
+
+                if (distance <= maxDistance) {
+                    joystickKnob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                } else {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    const x = Math.cos(angle) * maxDistance;
+                    const y = Math.sin(angle) * maxDistance;
+                    joystickKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+                }
+
+                // Update controls
+                const normalizedX = Math.max(-1, Math.min(1, deltaX / maxDistance));
+                const normalizedY = Math.max(-1, Math.min(1, deltaY / maxDistance));
+
+                controls.left = normalizedX < -0.3;
+                controls.right = normalizedX > 0.3;
+                controls.forward = normalizedY < -0.3;
+                controls.backward = normalizedY > 0.3;
+
+                event.preventDefault();
+            }
+
+            function handleJoystickEnd(event) {
+                joystickActive = false;
+                joystickKnob.style.transform = 'translate(-50%, -50%)';
+                controls.left = controls.right = controls.forward = controls.backward = false;
+                event.preventDefault();
+            }
+
+            joystick.addEventListener('touchstart', handleJoystickStart);
+            joystick.addEventListener('mousedown', handleJoystickStart);
+            document.addEventListener('touchmove', handleJoystickMove);
+            document.addEventListener('mousemove', handleJoystickMove);
+            document.addEventListener('touchend', handleJoystickEnd);
+            document.addEventListener('mouseup', handleJoystickEnd);
+
+            jumpBtn.addEventListener('touchstart', (e) => { controls.jump = true; e.preventDefault(); });
+            jumpBtn.addEventListener('touchend', (e) => { controls.jump = false; e.preventDefault(); });
+            jumpBtn.addEventListener('mousedown', () => controls.jump = true);
+            jumpBtn.addEventListener('mouseup', () => controls.jump = false);
+
+            interactBtn.addEventListener('click', interact);
+            buildBtn.addEventListener('click', toggleBuildMode);
+        }
+
+        function interact() {
+            // Check for nearby vehicles
+            const playerPos = player.position;
+            gameState.world.vehicles.forEach(vehicle => {
+                const distance = Math.sqrt(
+                    Math.pow(playerPos.x - vehicle.x, 2) + 
+                    Math.pow(playerPos.z - vehicle.z, 2)
+                );
+                if (distance < 3 && vehicle.available) {
+                    if (!gameState.player.inVehicle) {
+                        enterVehicle(vehicle);
+                    } else {
+                        exitVehicle();
+                    }
+                }
+            });
+        }
+
+        function enterVehicle(vehicle) {
+            gameState.player.inVehicle = true;
+            player.visible = false;
+            camera.position.set(vehicle.x, vehicle.y + 2, vehicle.z + 5);
+            console.log('🚗 Entered vehicle!');
+        }
+
+        function exitVehicle() {
+            gameState.player.inVehicle = false;
+            player.visible = true;
+            console.log('🚶 Exited vehicle!');
+        }
+
+        function toggleBuildMode() {
+            gameState.player.building = !gameState.player.building;
+            if (gameState.player.building) {
+                console.log('🏗️ Build mode activated!');
+                // Show build cursor/preview
+            } else {
+                console.log('🚫 Build mode deactivated!');
+            }
+        }
+
+        function updatePlayer() {
+            if (gameState.paused || !playerBody) return;
+
+            const speed = 5;
+            const jumpForce = 7;
+
+            // Movement
+            if (controls.forward) {
+                playerBody.velocity.x -= Math.sin(player.rotation.y) * speed;
+                playerBody.velocity.z -= Math.cos(player.rotation.y) * speed;
+            }
+            if (controls.backward) {
+                playerBody.velocity.x += Math.sin(player.rotation.y) * speed;
+                playerBody.velocity.z += Math.cos(player.rotation.y) * speed;
+            }
+            if (controls.left) {
+                player.rotation.y += 0.05;
+            }
+            if (controls.right) {
+                player.rotation.y -= 0.05;
+            }
+            if (controls.jump && Math.abs(playerBody.velocity.y) < 0.1) {
+                playerBody.velocity.y = jumpForce;
+            }
+
+            // Update visual position from physics
+            player.position.copy(playerBody.position);
+            player.quaternion.copy(playerBody.quaternion);
+
+            // Camera follow
+            if (!gameState.player.inVehicle) {
+                const idealCameraPosition = new THREE.Vector3(
+                    player.position.x - Math.sin(player.rotation.y) * 8,
+                    player.position.y + 5,
+                    player.position.z - Math.cos(player.rotation.y) * 8
+                );
+                camera.position.lerp(idealCameraPosition, 0.1);
+                camera.lookAt(player.position);
+            }
+
+            // Update game state
+            gameState.player.position = {
+                x: player.position.x,
+                y: player.position.y,
+                z: player.position.z
+            };
+        }
+
+        function updateTime() {
+            if (gameState.paused) return;
+
+            // Update game time (1 real second = 1 game minute)
+            const now = Date.now();
+            if (!updateTime.lastUpdate) updateTime.lastUpdate = now;
+            
+            if (now - updateTime.lastUpdate > 1000 / gameState.speed) {
+                gameState.time.minute++;
+                if (gameState.time.minute >= 60) {
+                    gameState.time.minute = 0;
+                    gameState.time.hour++;
+                    if (gameState.time.hour >= 24) {
+                        gameState.time.hour = 0;
+                        gameState.day++;
+                    }
+                }
+                updateTime.lastUpdate = now;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('money').textContent = gameState.money;
+            document.getElementById('day').textContent = gameState.day;
+            document.getElementById('time').textContent = 
+                `${gameState.time.hour.toString().padStart(2, '0')}:${gameState.time.minute.toString().padStart(2, '0')}`;
+            document.getElementById('season').textContent = gameState.season;
+
+            // Update pause button
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = gameState.paused ? '▶️ Fortsätt' : '⏸️ Pausa';
+
+            // Update speed button
+            const speedBtn = document.getElementById('speedBtn');
+            const speeds = ['▶️ Normal', '⏩ Snabb', '⏭️ Mycket snabb'];
+            speedBtn.textContent = speeds[gameState.speed - 1] || speeds[0];
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!loadingComplete) return;
+
+            const delta = clock.getDelta();
+            
+            updatePlayer();
+            updateTime();
+            
+            // Physics step
+            if (world) {
+                world.step(delta);
+            }
+
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            gameState.paused = !gameState.paused;
+            updateUI();
+        });
+
+        document.getElementById('speedBtn').addEventListener('click', () => {
+            gameState.speed = gameState.speed >= 3 ? 1 : gameState.speed + 1;
+            updateUI();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / (window.innerHeight - 80);
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight - 80);
+            }
+        });
+
+        // Check if Three.js and Cannon.js loaded
+        if (typeof THREE === 'undefined') {
+            console.error('❌ Three.js failed to load');
+            document.getElementById('loadingScreen').innerHTML = 
+                '<h2>Fel</h2><p>Three.js kunde inte laddas. Kontrollera internetanslutningen.</p>';
+        } else if (typeof CANNON === 'undefined') {
+            console.error('❌ Cannon.js failed to load');
+            document.getElementById('loadingScreen').innerHTML = 
+                '<h2>Fel</h2><p>Cannon.js kunde inte laddas. Kontrollera internetanslutningen.</p>';
+        } else {
+            // Start the game
+            console.log('🚀 Starting game initialization...');
+            init();
+        }
+    </script>
+</body>
+</html>
