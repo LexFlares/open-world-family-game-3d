@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Familjelivet - The Sims</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .game-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .game-header h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #FFD700;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Canvas */
+        #gameCanvas {
+            flex: 1;
+            display: block;
+            background: #87CEEB;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Status */
+        .status {
+            position: absolute;
+            top: 90px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 200;
+            display: none;
+        }
+
+        /* Mobile Controls */
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .joystick {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+
+        .joystick-knob {
+            width: 30px;
+            height: 30px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .game-header h1 {
+                font-size: 1.4rem;
+            }
+            .game-info {
+                gap: 10px;
+            }
+            .info-item {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <h1>🏡 Familjelivet 🏡</h1>
+            <div class="game-info">
+                <div class="info-item">
+                    <span class="info-icon">💰</span>
+                    <span class="info-label">Simoleons:</span>
+                    <span id="money" class="info-value">5000</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📅</span>
+                    <span class="info-label">Dag:</span>
+                    <span id="day" class="info-value">1</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🕐</span>
+                    <span class="info-label">Tid:</span>
+                    <span id="time" class="info-value">08:00</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🌤️</span>
+                    <span id="season" class="info-value">Vår</span>
+                </div>
+            </div>
+            <div class="time-controls">
+                <button id="pauseBtn" class="btn btn-secondary">⏸️ Pausa</button>
+                <button id="speedBtn" class="btn btn-secondary">▶️ Normal</button>
+            </div>
+        </header>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="loading-screen">
+            <div class="loading-spinner"></div>
+            <h2>Laddar din 3D-värld...</h2>
+            <p>Snart kan du utforska, bygga och köra bil!</p>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMsg" class="status"></div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <div class="joystick" id="joystick">
+                <div class="joystick-knob" id="joystickKnob"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn" id="jumpBtn">🤸</button>
+                <button class="action-btn" id="interactBtn">E</button>
+                <button class="action-btn" id="buildBtn">🏠</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r146/three.min.js"></script>
+    <script>
+        console.log('🎮 Starting Family Life 3D Game');
+        
+        // Game State
+        let gameState = {
+            money: 5000,
+            day: 1,
+            time: { hour: 8, minute: 0 },
+            season: 'Vår',
+            paused: false,
+            speed: 1
+        };
+
+        let scene, camera, renderer, player, clock = new THREE.Clock();
+        let controls = { forward: false, backward: false, left: false, right: false };
+        
+        function showStatus(message) {
+            const statusMsg = document.getElementById('statusMsg');
+            statusMsg.textContent = message;
+            statusMsg.style.display = 'block';
+            setTimeout(() => statusMsg.style.display = 'none', 3000);
+        }
+        
+        function initGame() {
+            try {
+                // Create scene
+                scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+
+                // Camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight - 80), 0.1, 1000);
+                camera.position.set(0, 5, 10);
+
+                // Renderer
+                const canvas = document.getElementById('gameCanvas');
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight - 80);
+                renderer.shadowMap.enabled = true;
+                renderer.setClearColor(0x87CEEB);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(50, 50, 25);
+                directionalLight.castShadow = true;
+                scene.add(directionalLight);
+
+                // Ground
+                const groundGeometry = new THREE.PlaneGeometry(100, 100);
+                const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2;
+                scene.add(ground);
+
+                // Player
+                const playerGeometry = new THREE.CapsuleGeometry(0.5, 1.5);
+                const playerMaterial = new THREE.MeshLambertMaterial({ color: 0x3498db });
+                player = new THREE.Mesh(playerGeometry, playerMaterial);
+                player.position.set(0, 1, 0);
+                player.castShadow = true;
+                scene.add(player);
+
+                // Add buildings and world objects
+                createBuilding(10, 0, 10, 0xff6b6b);
+                createBuilding(-10, 0, 10, 0x4ecdc4);
+                createBuilding(0, 0, 20, 0xffe66d);
+                createCar(5, 0.5, 0);
+                
+                // Trees
+                for (let i = 0; i < 15; i++) {
+                    const x = (Math.random() - 0.5) * 80;
+                    const z = (Math.random() - 0.5) * 80;
+                    if (Math.abs(x) > 15 || Math.abs(z) > 15) {
+                        createTree(x, 0, z);
+                    }
+                }
+
+                setupControls();
+                updateUI();
+                animate();
+                
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    showStatus('3D-värld laddad! Använd WASD för att gå runt. 🎮');
+                }, 1500);
+                
+            } catch (error) {
+                console.error('3D Error:', error);
+                initFallbackGame();
+            }
+        }
+        
+        function initFallbackGame() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 80;
+            
+            let player = { x: 400, y: 300, size: 20 };
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#90EE90';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Buildings
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillRect(200, 200, 80, 60);
+                ctx.fillStyle = '#4ecdc4';
+                ctx.fillRect(500, 150, 60, 80);
+                ctx.fillStyle = '#ffe66d';
+                ctx.fillRect(300, 400, 100, 70);
+                
+                // Player
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(player.x - 10, player.y - 10, 20, 20);
+                
+                requestAnimationFrame(draw);
+            }
+            
+            setupControls2D(player, canvas);
+            document.getElementById('loadingScreen').style.display = 'none';
+            draw();
+            showStatus('2D-läge aktivt! Använd WASD för att gå runt.');
+        }
+        
+        function createBuilding(x, y, z, color) {
+            const geometry = new THREE.BoxGeometry(4, 3, 4);
+            const material = new THREE.MeshLambertMaterial({ color });
+            const building = new THREE.Mesh(geometry, material);
+            building.position.set(x, y + 1.5, z);
+            building.castShadow = true;
+            scene.add(building);
+            
+            // Roof
+            const roofGeometry = new THREE.ConeGeometry(3, 1.5, 4);
+            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.set(x, y + 3.25, z);
+            roof.rotation.y = Math.PI / 4;
+            scene.add(roof);
+        }
+        
+        function createCar(x, y, z) {
+            const geometry = new THREE.BoxGeometry(3, 1, 1.5);
+            const material = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
+            const car = new THREE.Mesh(geometry, material);
+            car.position.set(x, y, z);
+            car.castShadow = true;
+            scene.add(car);
+        }
+        
+        function createTree(x, y, z) {
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2);
+            const trunk = new THREE.Mesh(trunkGeometry, new THREE.MeshLambertMaterial({ color: 0x8B4513 }));
+            trunk.position.set(x, y + 1, z);
+            scene.add(trunk);
+            
+            const leavesGeometry = new THREE.SphereGeometry(1.5);
+            const leaves = new THREE.Mesh(leavesGeometry, new THREE.MeshLambertMaterial({ color: 0x228B22 }));
+            leaves.position.set(x, y + 2.5, z);
+            scene.add(leaves);
+        }
+        
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                switch (e.code) {
+                    case 'KeyW': case 'ArrowUp': controls.forward = true; break;
+                    case 'KeyS': case 'ArrowDown': controls.backward = true; break;
+                    case 'KeyA': case 'ArrowLeft': controls.left = true; break;
+                    case 'KeyD': case 'ArrowRight': controls.right = true; break;
+                    case 'Space': e.preventDefault(); showStatus('Hoppar! 🤸'); break;
+                    case 'KeyE': showStatus('Interagerar! 🤝'); break;
+                    case 'KeyB': showStatus('Byggläge! 🏗️'); break;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                switch (e.code) {
+                    case 'KeyW': case 'ArrowUp': controls.forward = false; break;
+                    case 'KeyS': case 'ArrowDown': controls.backward = false; break;
+                    case 'KeyA': case 'ArrowLeft': controls.left = false; break;
+                    case 'KeyD': case 'ArrowRight': controls.right = false; break;
+                }
+            });
+        }
+        
+        function setupControls2D(player, canvas) {
+            document.addEventListener('keydown', (e) => {
+                const speed = 5;
+                switch (e.code) {
+                    case 'KeyW': case 'ArrowUp': player.y -= speed; break;
+                    case 'KeyS': case 'ArrowDown': player.y += speed; break;
+                    case 'KeyA': case 'ArrowLeft': player.x -= speed; break;
+                    case 'KeyD': case 'ArrowRight': player.x += speed; break;
+                }
+                player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
+                player.y = Math.max(10, Math.min(canvas.height - 10, player.y));
+            });
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!gameState.paused && player) {
+                const speed = 5 * clock.getDelta();
+                
+                if (controls.forward) {
+                    player.position.x -= Math.sin(player.rotation.y) * speed;
+                    player.position.z -= Math.cos(player.rotation.y) * speed;
+                }
+                if (controls.backward) {
+                    player.position.x += Math.sin(player.rotation.y) * speed;
+                    player.position.z += Math.cos(player.rotation.y) * speed;
+                }
+                if (controls.left) player.rotation.y += 2 * clock.getDelta();
+                if (controls.right) player.rotation.y -= 2 * clock.getDelta();
+                
+                // Camera follow
+                const idealPos = new THREE.Vector3(
+                    player.position.x - Math.sin(player.rotation.y) * 8,
+                    player.position.y + 5,
+                    player.position.z - Math.cos(player.rotation.y) * 8
+                );
+                camera.position.lerp(idealPos, 3 * clock.getDelta());
+                camera.lookAt(player.position);
+                
+                updateTime();
+            }
+            
+            if (renderer) renderer.render(scene, camera);
+        }
+        
+        function updateTime() {
+            updateTime.counter = (updateTime.counter || 0) + 1;
+            if (updateTime.counter % (60 / gameState.speed) === 0) {
+                gameState.time.minute++;
+                if (gameState.time.minute >= 60) {
+                    gameState.time.minute = 0;
+                    gameState.time.hour++;
+                    if (gameState.time.hour >= 24) {
+                        gameState.time.hour = 0;
+                        gameState.day++;
+                    }
+                }
+                updateUI();
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('money').textContent = gameState.money;
+            document.getElementById('day').textContent = gameState.day;
+            document.getElementById('time').textContent = 
+                `${gameState.time.hour.toString().padStart(2, '0')}:${gameState.time.minute.toString().padStart(2, '0')}`;
+            document.getElementById('season').textContent = gameState.season;
+            
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = gameState.paused ? '▶️ Fortsätt' : '⏸️ Pausa';
+            
+            const speedBtn = document.getElementById('speedBtn');
+            const speeds = ['▶️ Normal', '⏩ Snabb', '⏭️ Mycket snabb'];
+            speedBtn.textContent = speeds[gameState.speed - 1] || speeds[0];
+        }
+        
+        // Event listeners
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            gameState.paused = !gameState.paused;
+            updateUI();
+            showStatus(gameState.paused ? 'Pausat ⏸️' : 'Kör ▶️');
+        });
+        
+        document.getElementById('speedBtn').addEventListener('click', () => {
+            gameState.speed = gameState.speed >= 3 ? 1 : gameState.speed + 1;
+            updateUI();
+        });
+        
+        // Mobile controls
+        const joystick = document.getElementById('joystick');
+        const knob = document.getElementById('joystickKnob');
+        let joystickActive = false;
+        
+        function handleJoystick(e) {
+            if (!joystickActive) return;
+            const rect = joystick.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const touch = e.touches ? e.touches[0] : e;
+            const deltaX = touch.clientX - centerX;
+            const deltaY = touch.clientY - centerY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const maxDistance = 25;
+            
+            if (distance <= maxDistance) {
+                knob.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+            }
+            
+            controls.left = deltaX < -10;
+            controls.right = deltaX > 10;
+            controls.forward = deltaY < -10;
+            controls.backward = deltaY > 10;
+        }
+        
+        joystick.addEventListener('touchstart', () => joystickActive = true);
+        joystick.addEventListener('mousedown', () => joystickActive = true);
+        document.addEventListener('touchmove', handleJoystick);
+        document.addEventListener('mousemove', handleJoystick);
+        document.addEventListener('touchend', () => {
+            joystickActive = false;
+            knob.style.transform = 'translate(-50%, -50%)';
+            controls.left = controls.right = controls.forward = controls.backward = false;
+        });
+        document.addEventListener('mouseup', () => {
+            joystickActive = false;
+            knob.style.transform = 'translate(-50%, -50%)';
+            controls.left = controls.right = controls.forward = controls.backward = false;
+        });
+        
+        document.getElementById('jumpBtn').addEventListener('click', () => showStatus('Hoppar! 🤸'));
+        document.getElementById('interactBtn').addEventListener('click', () => showStatus('Interagerar! 🤝'));
+        document.getElementById('buildBtn').addEventListener('click', () => showStatus('Bygger! 🏗️'));
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / (window.innerHeight - 80);
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight - 80);
+            }
+        });
+        
+        // Start game
+        if (typeof THREE !== 'undefined') {
+            initGame();
+        } else {
+            initFallbackGame();
+        }
+    </script>
+</body>
+</html>
